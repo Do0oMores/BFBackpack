@@ -72,3 +72,39 @@
 | 新增 | `src/test/java/top/mores/bFBackpack/PluginContractTest.java` | JUnit 自动化验证（真实 SQLite、可选 MySQL） |
 | 新增 | `tools/ArtifactSmoke.java` | 验证真实 shaded 产物和仅 API jar 编译的可复现工具 |
 | 新增 | `tools/verify-artifacts.ps1` | 验证真实 shaded 产物和仅 API jar 编译的可复现工具 |
+
+## 加固轮次（PR #1）
+
+在 `feature/loadout-backend-v2` 上对审查问题做局部修复，未删除任何既有实现或测试。
+
+| 状态 | 文件 | 原因 |
+| --- | --- | --- |
+| 新增 | `src/main/java/top/mores/bFBackpack/api/ValidationProvider.java` | 异步运行时校验 SPI，替代在数据库线程同步回调 |
+| 新增 | `src/main/java/top/mores/bFBackpack/api/ValidationRegistration.java` | 身份绑定的注册句柄，支持替换/注销 |
+| 新增 | `src/main/java/top/mores/bFBackpack/api/SyncValidationProvider.java` | 旧同步校验器的安全适配器 |
+| 新增 | `src/main/java/top/mores/bFBackpack/api/DeploymentBinding.java` | 部署描述绑定的玩家/版本/权限/校验器代次 |
+| 新增 | `src/main/java/top/mores/bFBackpack/service/ValidationEngine.java` | 有界校验线程池、超时、并发上限、注册表与停用清理 |
+| 新增 | `src/main/java/top/mores/bFBackpack/service/DeploymentPlan.java` | 两阶段部署的不可变计划与逐槽汇总 |
+| 新增 | `src/main/java/top/mores/bFBackpack/listener/ValidationOwners.java` | 按 Bukkit 插件所有者跟踪并在停用时注销校验器 |
+| 修改 | `api/BFBackpackAPI.java` | API_VERSION→3、PROTOCOL_VERSION→2，新增 `registerValidators`，弃用 `installProviderValidators` |
+| 修改 | `api/CompatibilityInfo.java` | 增加 `detail` 错误分类与工厂方法，供精确错误码使用 |
+| 修改 | `api/DeploymentLoadout.java` | 增加 `binding`、`runtimeIssues`、`status`，`deployable()` 改为派生方法 |
+| 修改 | `api/ResultCode.java` | 新增 `LOADOUT_INVALID`、`RESOURCE_NOT_FOUND`、`VALIDATION_TIMEOUT`、`VALIDATION_BUSY`、`PERMISSION_STALE` |
+| 修改 | `api/WeaponProviderValidator.java`、`api/AttachmentCompatibilityValidator.java` | 注明改为在校验线程执行，不再在数据库线程 |
+| 修改 | `service/LoadoutService.java` | 两阶段部署、修改类操作拒绝过期权限快照、注册委托、停用时关闭引擎 |
+| 修改 | `service/PermissionSnapshot.java` | 增加 `playerId`、`capturedAt`、`generation` 与过期判断 |
+| 修改 | `service/LoadoutSession.java` | 增加加入代次，用于绑定权限快照与部署描述 |
+| 修改 | `listener/BukkitPermissionGateway.java` | 快照填充玩家、捕获时间与代次占位 |
+| 修改 | `config/PluginConfig.java` | 读取 `runtime-validation` 与 `permissions.max-snapshot-age-ms` |
+| 修改 | `BFBackpack.java` | 创建校验引擎、按 Plugin 所有者注册、停用顺序清理 |
+| 修改 | `resources/config.yml` | 新增 `runtime-validation` 与 `permissions` 段 |
+| 修改 | `resources/weapons.yml` | 占位 provider `BFEXAMPLE`；新增医疗/烟雾/补给/修理/侦察/信标装备 |
+| 修改 | `resources/class-rules.yml` | 四兵种 GADGET 槽位按职责区分默认装备 |
+| 新增 | `src/test/java/top/mores/bFBackpack/RuntimeValidationTest.java` | 异步校验、超时、饱和、线程边界、异常兜底 |
+| 新增 | `src/test/java/top/mores/bFBackpack/ValidationLifecycleTest.java` | 注册、重复注册、替换、注销、旧句柄、停用清理 |
+| 新增 | `src/test/java/top/mores/bFBackpack/PermissionFreshnessTest.java` | 快照过期、撤销、退出重连、永久解锁独立 |
+| 新增 | `src/test/java/top/mores/bFBackpack/DeploymentConsistencyTest.java` | 绑定 revision、校验中改配装/重载目录、迟到结果 |
+| 修改 | `src/test/java/top/mores/bFBackpack/BackendFixture.java` | 注入校验引擎与快照延迟模拟，提供 acceptAll/drain 辅助 |
+| 修改 | `src/test/java/top/mores/bFBackpack/LoadoutServiceTest.java`、`CatalogTest.java` | 同步 API v3 与新增目录条目、错误码变化 |
+| 修改 | `docs/API.md`、`docs/DATABASE.md`、`docs/DELIVERY.md`、`README.md` | 线程边界、注册生命周期、超时与权限时效、错误码、占位资源 |
+| 修改 | `docs/examples/BattlefieldApiExample.java` | API v3 示例：注册/注销校验器、Forge 线程调度、部署校验 |

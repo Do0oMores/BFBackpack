@@ -1,8 +1,11 @@
 package top.mores.bFBackpack.api;
 
-/** Pluggable verification of the exact attachment and skin plan against real provider resources. */
+/**
+ * Legacy synchronous verification of the exact attachment and skin plan, wrapped by
+ * {@link SyncValidationProvider}. Runs on a bounded validation thread, never on the database worker.
+ */
 @FunctionalInterface
 public interface AttachmentCompatibilityValidator {
-    /** Called on the worker; must return UNVERIFIED when resources cannot be verified. */
+    /** Must return UNVERIFIED when the real resources cannot be verified. */
     CompatibilityInfo validate(WeaponDefinition weapon, WeaponCustomization customization);
 }

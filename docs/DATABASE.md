@@ -48,15 +48,27 @@ grant/revoke 和默认兵种更新也使用事务；重复 grant 幂等，不重
 
 ## 线程与会话
 
-1. Bukkit 线程读取在线玩家和权限，生成本次操作的 `PermissionSnapshot`。不保留跨请求权限缓存。
-2. 操作进入复用的 `Database.executor()` 单线程队列，校验当前目录、会话代次、确认 revision 后执行事务。
+1. Bukkit 线程读取在线玩家和权限，生成本次操作的 `PermissionSnapshot`（`playerId`、`online`、`granted`、`capturedAt`、加入代次）。不保留跨请求权限缓存。
+2. 操作进入复用的 `Database.executor()` 单线程队列，校验当前目录、会话代次、快照年龄、确认 revision 后执行事务。
 3. 工作线程发布不可变确认快照并完成 Future。调用者如需 Bukkit UI/消息，必须自行调度回主线程。
+4. 部署描述在校验线程池完成第二次（运行时）校验，它的 Future 不在这条数据库线程上完成。
 
-连接建立、建表、查询、写入和目录热重载都在数据库队列执行。各玩家会话以 UUID 隔离，每次加入创建独立会话对象；离开立即移除，晚到的加载只写自己的旧对象，不会复活退出/重连前的缓存。
+数据库线程**从不执行也不等待** Forge/TaCZ 校验。`getDeploymentLoadout` 把它拆成：
 
-目录和规则以一个 `CatalogSnapshot` 整体替换，后台操作捕获同一代目录。不会保留旧目录推算的“已解锁”“可部署”结果；每次检查使用当前目录和本次权限。保存记录不因目录变化而被删除。
+| 步骤 | 线程 | 内容 |
+| --- | --- | --- |
+| 权限捕获 | Bukkit 主线程 | 只读权限节点，记录捕获时间 |
+| 准备 | `Database.executor()` | 目录/兵种/解锁/必需权限校验，解析回退，冻结 `DeploymentPlan`（含 loadout/customization/catalog revision 与会话代次） |
+| 运行时校验 | `BFBackpack-Validation` 线程池（固定 `max-concurrent-validations`，队列上限 `queue-capacity`，单请求超时 `timeout-ms`） | 调用 `ValidationProvider`，按槽位汇总 |
+| 超时 | `BFBackpack-Validation-Timeout` 单线程 | 到期完成 `VALIDATION_TIMEOUT`，迟到的适配器结果被丢弃 |
 
-停用顺序：停止 API 接收新请求并排队清理缓存 → 完成/取消未完成的权限 Future → `executor.shutdown()` → 等待已进入队列的写入 → 关闭连接。正常等待最多 20 秒；超过时输出警告，由非 daemon 收尾线程继续等待排空并关闭连接，不在进行中的事务下面直接关闭连接。操作系统强制结束进程不保证尚未提交的操作完成。
+校验阶段不访问 SQL、不调用 Bukkit 权限 API，也不写回任何缓存；因此适配器阻塞、超时或抛异常只影响该次请求，不会拖慢数据库队列，也不会污染确认状态。并发/排队上限由 `runtime-validation` 配置控制，超出直接返回 `VALIDATION_BUSY`。
+
+连接建立、建表、查询、写入和目录热重载都在数据库队列执行。各玩家会话以 UUID 隔离，每次加入创建独立会话对象并分配新的加入代次；离开立即移除，晚到的加载只写自己的旧对象，不会复活退出/重连前的缓存。
+
+目录和规则以一个 `CatalogSnapshot` 整体替换，后台操作捕获同一代目录。不会保留旧目录推算的“已解锁”“可部署”结果；每次检查使用当前目录和本次权限。保存记录不因目录变化而被删除。部署描述在收尾时比较目录 revision，变化则返回 `REVISION_CONFLICT` 而不是复用旧结论。
+
+停用顺序：停止 API 接收新请求 → 注销 Bridge 插件持有的校验器（释放其 ClassLoader）→ 关闭校验引擎（失败未完成任务、中断执行中任务）→ 排队清理缓存 → 完成/取消未完成的权限 Future → `executor.shutdown()` → 等待已进入队列的写入 → 关闭连接。正常等待最多 20 秒；超过时输出警告，由非 daemon 收尾线程继续等待排空并关闭连接，不在进行中的事务下面直接关闭连接。操作系统强制结束进程不保证尚未提交的操作完成。校验线程与超时线程均为 daemon，即使适配器忽略中断也不会阻止 JVM 退出。
 
 尚未进入数据库队列、仍在等待权限调度的请求在停用时得到 NOT_READY。已经开始处理的写入可以在玩家离开后提交，但不重建该玩家缓存。
 

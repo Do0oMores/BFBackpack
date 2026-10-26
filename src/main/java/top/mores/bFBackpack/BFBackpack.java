@@ -1,7 +1,9 @@
 package top.mores.bFBackpack;
 
 import com.google.gson.Gson;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import top.mores.bFBackpack.api.*;
@@ -11,7 +13,9 @@ import top.mores.bFBackpack.command.LoadoutCommand;
 import top.mores.bFBackpack.config.PluginConfig;
 import top.mores.bFBackpack.listener.*;
 import top.mores.bFBackpack.service.LoadoutService;
+import top.mores.bFBackpack.service.ValidationEngine;
 import top.mores.bFBackpack.storage.*;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.logging.Level;
@@ -22,6 +26,8 @@ public final class BFBackpack extends JavaPlugin {
     private Database database;
     private volatile LoadoutService service;
     private BukkitPermissionGateway permissions;
+    private ValidationOwners validationOwners;
+    private ValidationEngine validation;
     private volatile boolean stopping;
     private final Gson json = new Gson();
 
@@ -36,6 +42,10 @@ public final class BFBackpack extends JavaPlugin {
             if (!new java.io.File(getDataFolder(), file).exists()) saveResource(file, false);
         }
         permissions = new BukkitPermissionGateway(this);
+        validationOwners = new ValidationOwners();
+        getServer().getPluginManager().registerEvents(validationOwners, this);
+        ValidationEngine validation = new ValidationEngine(config.validation(), getLogger());
+        this.validation = validation;
         database = new Database(getLogger(), config.database());
         PluginCommand command = getCommand("bfbackpack");
         if (command == null) throw new IllegalStateException("bfbackpack missing from plugin.yml");
@@ -48,7 +58,8 @@ public final class BFBackpack extends JavaPlugin {
                 database.connect();
                 SqlLoadoutRepository repository = new SqlLoadoutRepository(database);
                 repository.initialize();
-                return new LoadoutService(catalog, repository, repository, repository, database.executor(), permissions, getLogger());
+                return new LoadoutService(catalog, repository, repository, repository, database.executor(), permissions,
+                        getLogger(), validation, config.permissionSnapshotMaxAgeMs());
             } catch (Exception e) { throw new CompletionException(e); }
         }, database.executor()).whenComplete((backend, error) -> {
             if (stopping) return;
@@ -70,27 +81,37 @@ public final class BFBackpack extends JavaPlugin {
             }
         });
     }
+
     @Override public void onDisable() {
         stopping = true;
         getServer().getServicesManager().unregisterAll(this);
+        // Drop bridge registrations first so no provider ClassLoader outlives this plugin.
+        if (validationOwners != null) validationOwners.close();
         if (service != null) service.shutdown();
+        if (validation != null) validation.close();   // idempotent; also covers a failed init
         if (permissions != null) permissions.close();
         if (database != null) database.close();
         service = null;
         getLogger().info("BFBackpack 已停用（已提交写入按序排空后关闭连接）");
     }
+
     /** Legacy configuration access; database settings apply on restart. */
     public PluginConfig config() { return config; }
+
     /** Retained for the inactive legacy command implementation. */
     public void reloadPluginConfig() {
         reloadConfig(); config = PluginConfig.load(getConfig(), getDataFolder(), getLogger());
     }
+
     /** Ready backend or null while startup is in progress. */
     public LoadoutService backend() { return service; }
+
     /** Classloader-neutral compatibility handshake. */
     public int getApiVersion() { return BFBackpackAPI.API_VERSION; }
+
     /** Classloader-neutral JSON protocol version. */
     public int getProtocolVersion() { return BFBackpackAPI.PROTOCOL_VERSION; }
+
     /**
      * Reflection bridge using only bootstrap/JDK types. JSON contains code, value and message.
      * Future completion is not on the Bukkit thread. Never join on a game thread.
@@ -103,7 +124,34 @@ public final class BFBackpack extends JavaPlugin {
         try { return current.getDeploymentLoadout(UUID.fromString(uuid), BackpackType.valueOf(type)).thenApply(json::toJson); }
         catch (IllegalArgumentException | NullPointerException e) { return CompletableFuture.completedFuture(json.toJson(LoadoutResult.fail(ResultCode.INVALID_INPUT, "Invalid UUID/class"))); }
     }
-    /** Install second-stage validators through a Bukkit bridge with a shared API classloader. */
+
+    /**
+     * Install a runtime validator owned by a bridge plugin.
+     * <p>Must run on the Bukkit main thread so plugin ownership can be verified against a real
+     * {@link Plugin} object instead of a client-supplied string. The registration is released
+     * automatically when {@code owner} disables, which also drops the reference that would otherwise keep
+     * the bridge ClassLoader alive. Closing the returned handle early is allowed and idempotent.</p>
+     *
+     * @throws IllegalStateException when called off the main thread or before the backend is ready
+     */
+    public ValidationRegistration registerValidators(Plugin owner, String providerId, ValidationProvider provider) {
+        if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("registerValidators must run on the Bukkit main thread");
+        Objects.requireNonNull(owner, "owner");
+        LoadoutService current = service;
+        if (current == null) throw new IllegalStateException("Backend not ready");
+        ValidationRegistration registration = current.registerValidators(providerId, provider);
+        validationOwners.bind(owner, registration);
+        getLogger().info("已注册运行时校验器 " + registration.providerId() + "（所有者 " + owner.getName() + "，代次 " + registration.generation() + "）");
+        return registration;
+    }
+
+    /**
+     * Install second-stage validators through a Bukkit bridge with a shared API classloader.
+     *
+     * @deprecated use {@link #registerValidators(Plugin, String, ValidationProvider)} so the registration
+     * is owned, replaceable and released on plugin disable.
+     */
+    @Deprecated(since = "3", forRemoval = false)
     public void installProviderValidators(WeaponProviderValidator weapons, AttachmentCompatibilityValidator attachments) {
         LoadoutService current = service;
         if (current == null) throw new IllegalStateException("Backend not ready");

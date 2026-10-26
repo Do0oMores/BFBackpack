@@ -57,3 +57,49 @@
 - 原物品背包实现只作保留参考，2.0 不注册，不承诺其旧 GUI 行为继续作为产品功能。
 
 因此代码、独立 API 与本地自动化验证已经交付；真实 MySQL 和目标混合服务端仍需环境验收。没有将未执行项目描述为测试通过。
+
+---
+
+# 加固轮次：校验生命周期与权限时效（PR #1）
+
+基于 `ac37bbcc162f762a5d2b3e93c31a41c956a233f0`，继续在 `feature/loadout-backend-v2` 上做局部修复，未重写第一阶段，未新增 Battlefield 功能，未做旧数据迁移。
+
+## 修复内容
+
+| 级别 | 问题 | 处理 |
+| --- | --- | --- |
+| P1 | 数据库线程同步执行外部校验 | 部署拆成两阶段：数据库线程冻结不可变 `DeploymentPlan`，运行时校验交给独立有界线程池 |
+| P1 | 校验器无法卸载/替换 | 新增 `registerValidators(providerId, provider)` + `ValidationRegistration`（身份绑定、幂等关闭）；Bukkit 入口按 `Plugin` 所有者注册并在 `PluginDisableEvent` 自动注销 |
+| P1 | 权限快照可能长期失效 | `PermissionSnapshot` 增加 `playerId`/`capturedAt`/`generation`；修改类操作与部署拒绝过期快照（`PERMISSION_STALE`）；部署在读库前重新捕获 |
+| P2 | 部署失败错误码笼统 | 新增 `RESOURCE_NOT_FOUND`、`LOADOUT_INVALID`、`VALIDATION_TIMEOUT`、`VALIDATION_BUSY`、`PERMISSION_STALE`；逐槽 `runtimeIssues` 保留细节 |
+| P2 | 四兵种共用反坦克/炸药默认 | `weapons.yml` 新增医疗包/烟雾/弹药箱/修理工具/侦察镜/复活信标，`class-rules.yml` 按职责分槽；全部使用独立占位 provider `BFEXAMPLE` |
+
+## 线程模型
+
+| 线程 | 职责 | 不做 |
+| --- | --- | --- |
+| Bukkit 主线程 | 读取权限快照、提交请求、调度 UI | 不等待数据库，不执行校验 |
+| `BFBackpack-DB`（单线程） | SQL、目录/授权校验、冻结部署计划 | 不调用 Forge/TaCZ，不等待主线程 |
+| `BFBackpack-Validation`（固定大小） | 调用 `ValidationProvider`，逐槽汇总 | 不读写 SQL，不调用 Bukkit 权限 |
+| `BFBackpack-Validation-Timeout`（单线程） | 到期完成 `VALIDATION_TIMEOUT`，迟到结果丢弃 | — |
+
+部署描述 Future 在校验线程或超时线程完成，数据库线程从不阻塞其上；`runtime-validation` 限制线程数、队列与单请求预算，超出返回 `VALIDATION_BUSY`；停用时注销校验器、失败未完成任务并中断执行中任务（daemon 线程不阻止 JVM 退出）。
+
+## 实际验证结果
+
+验证环境：Windows、Oracle JDK 17.0.12、Maven 3.9.16，日期 2026-10-27。
+
+| 实际命令/检查 | 结果 |
+| --- | --- |
+| `mvn -o -B -ntp clean verify` | **BUILD SUCCESS**；65 项测试，64 通过、0 失败、0 错误、1 跳过（MySQL 无环境） |
+| `tools/verify-artifacts.ps1 -JavaHome 'C:\Program Files\Java\jdk-17'` | **ARTIFACT_SMOKE_OK**；仅 API jar 编译 v3 示例、shaded jar 冒烟、`jdeps` 仅 `java.base` |
+| 新增测试类 | `RuntimeValidationTest`(8)、`ValidationLifecycleTest`(7)、`PermissionFreshnessTest`(5)、`DeploymentConsistencyTest`(4) |
+| Mohist / Forge / TaCZ 实机联调 | **未执行**：无服务端与真实适配器环境 |
+
+## 本轮已知限制
+
+- 校验器必须在桥接插件侧实现并自行完成 Forge 线程调度；真实 TaCZ 资源解析、附件槽位冲突检测未在此环境验证。
+- 同步适配器（含已弃用的 `installProviderValidators`）若阻塞，会占用一个校验槽位直到超时；建议迁移到 `ValidationProvider`。
+- 部署要求六个槽位全部可解析；任一槽位缺少有效默认即返回 `LOADOUT_INVALID`（这是有意的严格策略）。
+- 权限快照年龄只依据本机时钟，未处理跨机时钟漂移；跨服场景仍依赖第二阶段一致性协议。
+- 未新增任何真实 Forge 物品，`BFEXAMPLE` 占位资源始终不可部署。

@@ -7,14 +7,20 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Server-authoritative data API v2, safe to invoke from any thread. Futures never imply a Bukkit
+ * Server-authoritative data API v3, safe to invoke from any thread. Futures never imply a Bukkit
  * callback thread. Do not join futures on the server thread. Mutations return only after commit.
  * Callers are trusted server integrations; never expose grant/revoke or arbitrary UUIDs to clients.
  * Link against the api classifier with provided scope and depend on BFBackpack in plugin.yml.
+ *
+ * <h2>Thread boundaries</h2>
+ * Database work runs on one ordered worker thread. Bukkit permissions are only read on the main
+ * thread through an asynchronous gateway. Runtime provider validation runs on a bounded, time-limited
+ * validation pool, so the database worker never executes and never waits for Forge/TaCZ code.
+ * Deployment futures therefore complete on a validation or timeout thread, not on the database worker.
  */
 public interface BFBackpackAPI {
-    int API_VERSION = 2;
-    int PROTOCOL_VERSION = 1;
+    int API_VERSION = 3;
+    int PROTOCOL_VERSION = 2;
     /** ABI version; compare before calling any other methods. */
     default int apiVersion() { return API_VERSION; }
     /** Snapshot of enabled class-legal weapons with current unlock/permission status. */
@@ -52,16 +58,35 @@ public interface BFBackpackAPI {
     CompletableFuture<LoadoutResult<UnlockResult>> revokeUnlock(UUID playerId, String itemId);
     /** Persistent item IDs, excluding permission/default grants; supports offline UUIDs. */
     CompletableFuture<LoadoutResult<Set<String>>> getPlayerUnlocks(UUID playerId);
-    /** Get a fresh deployment description. PROVIDER_UNAVAILABLE may include an inspectable value. */
+    /**
+     * Two-phase deployment description. Phase one reads the database worker and returns an immutable
+     * plan; phase two verifies provider resources on the validation pool with a hard timeout. The future
+     * completes on a validation/timeout thread. A failure still carries a safe read-only description;
+     * never deploy unless {@code successful() && value.deployable()}.
+     */
     CompletableFuture<LoadoutResult<DeploymentLoadout>> getDeploymentLoadout(UUID playerId, BackpackType type);
     /** Read the independently persisted preferred class. */
     CompletableFuture<LoadoutResult<BackpackType>> getPreferredClass(UUID playerId);
     /** Persist the preferred class without changing any class equipment. */
     CompletableFuture<LoadoutResult<BackpackType>> setPreferredClass(UUID playerId, BackpackType type);
     /**
-     * Trusted server adapter hook, no implementation dependency required. Both validators must be
-     * installed together. They run on the ordered worker; return UNVERIFIED for missing resources.
-     * A bridge that needs Forge APIs must marshal to Forge's server thread without blocking Bukkit.
+     * Install or replace the runtime validator. Registration is process-wide: a second call replaces the
+     * previous provider and the previous handle becomes inactive. Closing the returned handle removes
+     * only that registration.
+     *
+     * @param providerId stable lowercase ID of the bridge, {@code [a-z0-9_.-]{1,48}}
+     * @param provider   adapter whose {@link ValidationProvider#apiVersion()} matches {@link #API_VERSION}
+     * @throws IllegalArgumentException for an invalid ID or an incompatible provider ABI
+     * @throws IllegalStateException    when the backend is closed
      */
+    ValidationRegistration registerValidators(String providerId, ValidationProvider provider);
+    /**
+     * Install two synchronous validators without a provider ID.
+     *
+     * @deprecated since API v3: use {@link #registerValidators(String, ValidationProvider)} so the
+     * registration can be replaced and closed. The legacy registration is synchronous, has no owner and
+     * cannot be unregistered; it is replaced by the next legacy or typed registration.
+     */
+    @Deprecated(since = "3", forRemoval = false)
     void installProviderValidators(WeaponProviderValidator weapons, AttachmentCompatibilityValidator attachments);
 }

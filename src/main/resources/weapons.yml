@@ -1,19 +1,43 @@
+# ============================================================================
+# BFBackpack 2.0 装备目录（第一阶段为开发占位数据）
+# ----------------------------------------------------------------------------
+# 所有 provider: BFEXAMPLE 与 gun-id: example:* 均为**开发占位资源**，只用于验证
+# 目录、TAG、兵种规则、解锁与部署描述的数据流，不代表任何真实 TaCZ 枪械。
+#
+# 第二阶段替换步骤：
+#   1. 把 provider 改为真实提供方（例如 TACZ）。
+#   2. 把 gun-id 改为该提供方真实存在的资源 ID。
+#   3. 在 Bukkit 桥接插件里注册 ValidationProvider（见 docs/API.md）。
+# 只要 provider 仍为 BFEXAMPLE，真实 Adapter 必须返回 UNVERIFIED，
+# 因此占位装备永远不会被标记为可部署。
+#
 # 内部 ID、provider 与 gun-id 分别标识目录条目、提供方和真实资源。
-# 所有 example:* 都只是示例，必须由第二阶段 Adapter 验证，不能据此发放物品。
 # TAG 必须先在此注册；大小写会规范化为小写。
+# ============================================================================
 tags:
+  # 枪械
   - battlefield:assault_rifle
   - battlefield:semi_auto_rifle
   - battlefield:smg
   - battlefield:lmg
   - battlefield:bolt_action
   - battlefield:pistol
+  # 装备分类：按兵种职责区分，不再四个兵种共用同一套反坦克/炸药
   - battlefield:gadget
+  - battlefield:medical
+  - battlefield:smoke
+  - battlefield:supply
+  - battlefield:repair
+  - battlefield:recon
+  - battlefield:beacon
+  # 其他
   - battlefield:grenade
   - battlefield:melee
+
 weapons:
+  # ---------------------------------------------------------------- 突击兵
   battlefield:stg44:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:stg44
     display-name: 'StG 44'
     category: ASSAULT_RIFLE
@@ -27,7 +51,7 @@ weapons:
       enabled: true
 
   battlefield:gewehr43:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:gewehr43
     display-name: 'Gewehr 43'
     category: SEMI_AUTO_RIFLE
@@ -40,8 +64,37 @@ weapons:
     attachments:
       enabled: true
 
+  battlefield:anti_tank:
+    provider: BFEXAMPLE
+    gun-id: example:anti_tank
+    display-name: '反载具工具'
+    category: ANTI_TANK
+    enabled: true
+    tags: [battlefield:gadget]
+    slots: [GADGET_1]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:dynamite:
+    provider: BFEXAMPLE
+    gun-id: example:dynamite
+    display-name: '炸药工具'
+    category: EXPLOSIVE
+    enabled: true
+    tags: [battlefield:gadget]
+    slots: [GADGET_2]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  # ---------------------------------------------------------------- 医疗兵
   battlefield:mp40:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:mp40
     display-name: 'MP 40'
     category: SMG
@@ -54,8 +107,37 @@ weapons:
     attachments:
       enabled: true
 
+  battlefield:medkit:
+    provider: BFEXAMPLE
+    gun-id: example:medkit
+    display-name: '医疗包'
+    category: MEDICAL
+    enabled: true
+    tags: [battlefield:medical]
+    slots: [GADGET_1]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:smoke_grenade:
+    provider: BFEXAMPLE
+    gun-id: example:smoke_grenade
+    display-name: '烟雾装备'
+    category: SMOKE
+    enabled: true
+    tags: [battlefield:smoke]
+    slots: [GADGET_2]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  # ---------------------------------------------------------------- 支援兵
   battlefield:mg42:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:mg42
     display-name: 'MG 42'
     category: LMG
@@ -68,8 +150,37 @@ weapons:
     attachments:
       enabled: true
 
+  battlefield:ammo_box:
+    provider: BFEXAMPLE
+    gun-id: example:ammo_box
+    display-name: '弹药补给箱'
+    category: SUPPLY
+    enabled: true
+    tags: [battlefield:supply]
+    slots: [GADGET_1]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:repair_tool:
+    provider: BFEXAMPLE
+    gun-id: example:repair_tool
+    display-name: '修理工具'
+    category: REPAIR
+    enabled: true
+    tags: [battlefield:repair]
+    slots: [GADGET_2]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  # ---------------------------------------------------------------- 侦察兵
   battlefield:kar98k:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:kar98k
     display-name: 'Kar 98k'
     category: BOLT_ACTION
@@ -82,8 +193,37 @@ weapons:
     attachments:
       enabled: true
 
+  battlefield:spotting_scope:
+    provider: BFEXAMPLE
+    gun-id: example:spotting_scope
+    display-name: '侦察标记镜'
+    category: RECON
+    enabled: true
+    tags: [battlefield:recon]
+    slots: [GADGET_1]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:respawn_beacon:
+    provider: BFEXAMPLE
+    gun-id: example:respawn_beacon
+    display-name: '复活信标'
+    category: BEACON
+    enabled: true
+    tags: [battlefield:beacon]
+    slots: [GADGET_2]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  # ---------------------------------------------------------------- 通用
   battlefield:p38:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:p38
     display-name: 'P38'
     category: PISTOL
@@ -96,36 +236,8 @@ weapons:
     attachments:
       enabled: true
 
-  battlefield:anti_tank:
-    provider: TACZ
-    gun-id: example:anti_tank
-    display-name: '反载具工具'
-    category: GADGET
-    enabled: true
-    tags: [battlefield:gadget]
-    slots: [GADGET_1]
-    unlock:
-      default-unlocked: true
-      permission: ''
-    attachments:
-      enabled: false
-
-  battlefield:dynamite:
-    provider: TACZ
-    gun-id: example:dynamite
-    display-name: '炸药工具'
-    category: GADGET
-    enabled: true
-    tags: [battlefield:gadget]
-    slots: [GADGET_2]
-    unlock:
-      default-unlocked: true
-      permission: ''
-    attachments:
-      enabled: false
-
   battlefield:frag:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:frag
     display-name: '破片手雷'
     category: GRENADE
@@ -139,7 +251,7 @@ weapons:
       enabled: false
 
   battlefield:knife:
-    provider: TACZ
+    provider: BFEXAMPLE
     gun-id: example:knife
     display-name: '战斗刀'
     category: MELEE

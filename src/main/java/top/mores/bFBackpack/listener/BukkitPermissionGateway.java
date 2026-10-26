@@ -25,7 +25,8 @@ public final class BukkitPermissionGateway implements PermissionGateway, AutoClo
             if (player != null && player.isOnline()) {
                 for (String node : nodes) if (player.hasPermission(node)) granted.add(node);
             }
-            future.complete(new PermissionSnapshot(player != null && player.isOnline(), granted));
+            future.complete(new PermissionSnapshot(uuid, player != null && player.isOnline(), granted,
+                    System.currentTimeMillis(), 0));
         };
         try {
             if (Bukkit.isPrimaryThread()) capture.run();

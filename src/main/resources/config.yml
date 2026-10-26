@@ -24,6 +24,21 @@ database:
     password: ""
     parameters: "useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8&connectionTimeZone=UTC"
 
+# 运行时校验（第二阶段 TaCZ/Forge 资源验证）。
+# 校验在独立的有界线程池执行，数据库工作线程永远不执行也不会等待校验逻辑。
+runtime-validation:
+  # 单次部署描述的整体校验预算；超时后明确返回 VALIDATION_TIMEOUT，资源保持未验证
+  timeout-ms: 3000
+  # 同时执行的校验数量，即线程池大小；过小会排队，过大会放大适配器阻塞的影响
+  max-concurrent-validations: 8
+  # 等待队列上限；队列满时立即返回 VALIDATION_BUSY，不会无限排队
+  queue-capacity: 32
+
+permissions:
+  # 权限快照的最大有效时间（毫秒）。修改配装/部署时若快照已超过该时间，
+  # 会返回 PERMISSION_STALE 而不是用过期权限授权；0 表示关闭该检查。
+  max-snapshot-age-ms: 5000
+
 settings:
   # 两次切换之间的最小间隔（毫秒），0 表示不限制
   switch-cooldown-ms: 500

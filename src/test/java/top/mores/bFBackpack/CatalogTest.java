@@ -22,7 +22,7 @@ class CatalogTest {
         Path path = folder.resolve(file); Files.writeString(path, Files.readString(path).replace(from, to));
     }
     @Test void loadsAndFiltersNormalizedTagsAndIndependentSlots() {
-        var c = catalog.snapshot(); assertEquals(10, c.weapons().size()); assertEquals(3, c.attachments().size()); assertTrue(diagnostics.isEmpty());
+        var c = catalog.snapshot(); assertEquals(16, c.weapons().size()); assertEquals(3, c.attachments().size()); assertTrue(diagnostics.isEmpty());
         assertEquals(List.of("battlefield:stg44"), c.filter(BackpackType.ASSAULT, LoadoutSlot.PRIMARY, Set.of("BATTLEFIELD:ASSAULT_RIFLE")).stream().map(WeaponDefinition::id).toList());
         assertTrue(c.filter(BackpackType.MEDIC, LoadoutSlot.PRIMARY, Set.of()).stream().noneMatch(w -> w.id().equals("battlefield:stg44")));
         assertThrows(IllegalArgumentException.class, () -> c.filter(null, null, Set.of("battlefield:unknown")));
@@ -39,7 +39,7 @@ class CatalogTest {
     }
     @Test void unknownWeaponTagQuarantinesOnlyThatWeapon() throws Exception {
         replace("weapons.yml", "tags: [battlefield:smg]", "tags: [battlefield:does_not_exist]");
-        catalog.reload(folder); assertEquals(9, catalog.snapshot().weapons().size());
+        catalog.reload(folder); assertEquals(15, catalog.snapshot().weapons().size());
         assertTrue(diagnostics.stream().anyMatch(s -> s.contains("unknown ID/TAG")));
     }
     @Test void invalidBooleanAndUnknownSlotsAreRejectedPerEntry() throws Exception {

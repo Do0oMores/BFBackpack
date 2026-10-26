@@ -174,7 +174,7 @@ class LoadoutServiceTest {
         assertEquals(ResultCode.OK, await(f.api.reloadCatalog(folder)).code());
         f.api.installProviderValidators(w -> new CompatibilityInfo(CompatibilityInfo.State.VERIFIED, "test"), (w, p) -> new CompatibilityInfo(CompatibilityInfo.State.VERIFIED, "test"));
         var result = await(f.api.getDeploymentLoadout(player, BackpackType.ASSAULT));
-        assertEquals(ResultCode.PROVIDER_UNAVAILABLE, result.code()); assertFalse(result.value().deployable());
+        assertEquals(ResultCode.LOADOUT_INVALID, result.code()); assertFalse(result.value().deployable());
         assertNull(result.value().loadout().issues().get(0).fallbackId());
         assertFalse(result.value().equipment().containsKey(LoadoutSlot.PRIMARY));
     }
@@ -183,7 +183,7 @@ class LoadoutServiceTest {
         assertThrows(UnsupportedOperationException.class, () -> await(f.api.getCatalog(player, BackpackType.ASSAULT)).value().clear());
         assertThrows(UnsupportedOperationException.class, () -> await(f.api.getWeaponCustomization(player, GUN)).value().attachments().put("SCOPE", SCOPE));
         assertEquals(ResultCode.API_INCOMPATIBLE, new BFBackpackAPIProvider(f.api).requireVersion(99).code());
-        assertEquals(ResultCode.OK, new BFBackpackAPIProvider(f.api).requireVersion(2).code());
+        assertEquals(ResultCode.OK, new BFBackpackAPIProvider(f.api).requireVersion(3).code());
     }
     @Test void offlinePermanentUnlockIsIdempotentAndSurvivesJoining() throws Exception {
         UUID offline = UUID.randomUUID(); await(f.api.grantUnlock(offline, OTHER)); await(f.api.grantUnlock(offline, OTHER));

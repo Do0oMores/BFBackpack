@@ -1,4 +1,6 @@
 # 附件槽位为稳定英文 ID，可在此扩展。兼容白名单仅为目录校验，不代表 TaCZ 验证通过。
+# 所有 provider-id: example:* 都是**开发占位资源**；第二阶段需替换为真实 TaCZ 附件 ID，
+# 并由 ValidationProvider 验证真实兼容性（目录白名单不足以证明可部署）。
 types: [SCOPE, MUZZLE, STOCK, GRIP, LASER, EXTENDED_MAG]
 attachments:
   battlefield:scope_basic:
