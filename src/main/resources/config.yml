@@ -1,0 +1,64 @@
+# BFBackpack —— 战地风格四兵种背包
+#
+# 每个玩家固定拥有 ASSAULT / MEDIC / SUPPORT / RECON 四个背包，
+# 数据以 (player_uuid, backpack_type) 作为主键存储，玩家之间、兵种之间互不影响。
+# 背包内容存在数据库里而不是玩家身上，所以死亡不会掉落。
+
+database:
+  # sqlite: 零配置，文件落在 plugins/BFBackpack/<file>，适合单服
+  # mysql : 多服共享存档时使用，表名统一带 table-prefix 前缀
+  type: sqlite
+  table-prefix: bf_
+
+  sqlite:
+    file: backpacks.db
+
+  mysql:
+    host: 127.0.0.1
+    port: 3306
+    database: minecraft
+    username: root
+    password: ""
+    parameters: "useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8&connectionTimeZone=UTC"
+
+settings:
+  # 两次切换之间的最小间隔（毫秒），0 表示不限制
+  switch-cooldown-ms: 500
+  # 切换后是否自动打开新背包
+  open-on-switch: true
+  # 脏数据兜底落盘间隔（秒），0 表示关闭；正常关闭界面/切换/退出都会即时保存
+  auto-save-seconds: 300
+  # 是否按下面的 deny-materials 拦截物品放入
+  restrict-items: true
+  # 关闭界面时把非法物品、超容量物品退还玩家；false 则直接丢弃
+  eject-illegal-items: true
+
+# 四个兵种的功能定位与容量，均可自由调整
+backpacks:
+  ASSAULT:
+    display: "突击"
+    description: "正面突击与反载具，均衡的通用火力"
+    icon: IRON_SWORD
+    slots: 9
+    deny-materials: [BOW, CROSSBOW]
+
+  MEDIC:
+    display: "医疗"
+    description: "战场救护，续航优先，禁带爆炸物"
+    icon: GOLDEN_APPLE
+    slots: 9
+    deny-materials: [BOW, CROSSBOW, TNT, TNT_MINECART, END_CRYSTAL, RESPAWN_ANCHOR, FIRE_CHARGE]
+
+  SUPPORT:
+    display: "支援"
+    description: "火力压制与弹药补给，容量最大"
+    icon: CHEST
+    slots: 9
+    deny-materials: [BOW, CROSSBOW, ELYTRA]
+
+  RECON:
+    display: "侦查"
+    description: "远程侦察与精确狙杀，轻装机动"
+    icon: SPYGLASS
+    slots: 9
+    deny-materials: [TNT, TNT_MINECART, END_CRYSTAL, RESPAWN_ANCHOR]

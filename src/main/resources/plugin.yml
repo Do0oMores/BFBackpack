@@ -3,3 +3,19 @@ version: '${version}'
 
 main: top.mores.bFBackpack.BFBackpack
 api-version: '1.20'
+description: 战地风格四兵种背包，数据持久化到 SQLite / MySQL
+author: Mores
+
+commands:
+  bfbackpack:
+    description: 打开或切换战地风格背包
+    usage: /bfbackpack [select|switch|list|reload]
+    aliases: [bp, backpack]
+
+permissions:
+  bfbackpack.use:
+    description: 允许使用背包系统
+    default: true
+  bfbackpack.reload:
+    description: 允许重载配置
+    default: op
