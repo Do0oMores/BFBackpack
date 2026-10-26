@@ -1,0 +1,153 @@
+# 内部 ID、provider 与 gun-id 分别标识目录条目、提供方和真实资源。
+# 所有 example:* 都只是示例，必须由第二阶段 Adapter 验证，不能据此发放物品。
+# TAG 必须先在此注册；大小写会规范化为小写。
+tags:
+  - battlefield:assault_rifle
+  - battlefield:semi_auto_rifle
+  - battlefield:smg
+  - battlefield:lmg
+  - battlefield:bolt_action
+  - battlefield:pistol
+  - battlefield:gadget
+  - battlefield:grenade
+  - battlefield:melee
+weapons:
+  battlefield:stg44:
+    provider: TACZ
+    gun-id: example:stg44
+    display-name: 'StG 44'
+    category: ASSAULT_RIFLE
+    enabled: true
+    tags: [battlefield:assault_rifle]
+    slots: [PRIMARY]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: true
+
+  battlefield:gewehr43:
+    provider: TACZ
+    gun-id: example:gewehr43
+    display-name: 'Gewehr 43'
+    category: SEMI_AUTO_RIFLE
+    enabled: true
+    tags: [battlefield:semi_auto_rifle]
+    slots: [PRIMARY]
+    unlock:
+      default-unlocked: false
+      permission: 'bfbackpack.weapon.gewehr43'
+    attachments:
+      enabled: true
+
+  battlefield:mp40:
+    provider: TACZ
+    gun-id: example:mp40
+    display-name: 'MP 40'
+    category: SMG
+    enabled: true
+    tags: [battlefield:smg]
+    slots: [PRIMARY]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: true
+
+  battlefield:mg42:
+    provider: TACZ
+    gun-id: example:mg42
+    display-name: 'MG 42'
+    category: LMG
+    enabled: true
+    tags: [battlefield:lmg]
+    slots: [PRIMARY]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: true
+
+  battlefield:kar98k:
+    provider: TACZ
+    gun-id: example:kar98k
+    display-name: 'Kar 98k'
+    category: BOLT_ACTION
+    enabled: true
+    tags: [battlefield:bolt_action]
+    slots: [PRIMARY]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: true
+
+  battlefield:p38:
+    provider: TACZ
+    gun-id: example:p38
+    display-name: 'P38'
+    category: PISTOL
+    enabled: true
+    tags: [battlefield:pistol]
+    slots: [SECONDARY]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: true
+
+  battlefield:anti_tank:
+    provider: TACZ
+    gun-id: example:anti_tank
+    display-name: '反载具工具'
+    category: GADGET
+    enabled: true
+    tags: [battlefield:gadget]
+    slots: [GADGET_1]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:dynamite:
+    provider: TACZ
+    gun-id: example:dynamite
+    display-name: '炸药工具'
+    category: GADGET
+    enabled: true
+    tags: [battlefield:gadget]
+    slots: [GADGET_2]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:frag:
+    provider: TACZ
+    gun-id: example:frag
+    display-name: '破片手雷'
+    category: GRENADE
+    enabled: true
+    tags: [battlefield:grenade]
+    slots: [GRENADE]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false
+
+  battlefield:knife:
+    provider: TACZ
+    gun-id: example:knife
+    display-name: '战斗刀'
+    category: MELEE
+    enabled: true
+    tags: [battlefield:melee]
+    slots: [MELEE]
+    unlock:
+      default-unlocked: true
+      permission: ''
+    attachments:
+      enabled: false

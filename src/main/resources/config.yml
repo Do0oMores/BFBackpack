@@ -1,4 +1,7 @@
-# BFBackpack —— 战地风格四兵种背包
+# BFBackpack 2.0 —— 服务器权威配装后端
+# 新系统的装备/附件/规则分别见 weapons.yml、attachments.yml、class-rules.yml。
+# 下方 settings/backpacks 为保留的旧背包实现配置；2.0 默认不注册旧 GUI 和物品发放。
+# 新系统采用每次修改事务确认后更新缓存，无需自动保存周期。
 #
 # 每个玩家固定拥有 ASSAULT / MEDIC / SUPPORT / RECON 四个背包，
 # 数据以 (player_uuid, backpack_type) 作为主键存储，玩家之间、兵种之间互不影响。

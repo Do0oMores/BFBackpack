@@ -1,0 +1,88 @@
+# 每个兵种/槽位单独限制；deny-tags/deny-items 优先于 allow。
+# default 必须存在、启用、默认解锁且对该兵种/槽位合法。
+# 未配置槽位拒绝装备；无有效默认时返回失效原因并阻止部署。
+classes:
+  ASSAULT:
+    PRIMARY:
+      allow-tags: [battlefield:assault_rifle, battlefield:semi_auto_rifle]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:stg44
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:anti_tank
+    GADGET_2:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:dynamite
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+  MEDIC:
+    PRIMARY:
+      allow-tags: [battlefield:smg]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:mp40
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:anti_tank
+    GADGET_2:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:dynamite
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+  SUPPORT:
+    PRIMARY:
+      allow-tags: [battlefield:lmg]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:mg42
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:anti_tank
+    GADGET_2:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:dynamite
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+  RECON:
+    PRIMARY:
+      allow-tags: [battlefield:bolt_action, battlefield:semi_auto_rifle]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:kar98k
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:anti_tank
+    GADGET_2:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:dynamite
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife

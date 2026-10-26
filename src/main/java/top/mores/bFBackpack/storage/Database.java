@@ -34,6 +34,8 @@ public class Database implements AutoCloseable {
     private Connection connection;
 
     public Database(Logger logger, DbSettings settings) {
+        if (settings.tablePrefix() == null || !settings.tablePrefix().matches("(?:[A-Za-z_][A-Za-z0-9_]{0,15})?"))
+            throw new IllegalArgumentException("Invalid database table prefix");
         this.logger = logger;
         this.settings = settings;
         this.playerTable = settings.tablePrefix() + "player";
@@ -47,7 +49,7 @@ public class Database implements AutoCloseable {
 
     public void connect() throws Exception {
         open();
-        createTables();
+        // Backend tables are initialized by SqlLoadoutRepository on the same worker.
     }
 
     public ExecutorService executor() {
@@ -65,6 +67,8 @@ public class Database implements AutoCloseable {
     public boolean mysql() {
         return settings.mysql();
     }
+
+    public String tablePrefix() { return settings.tablePrefix(); }
 
     /** 取连接，失效时自动重连（MySQL 的 wait_timeout 会掐掉长时间空闲的连接）。 */
     public synchronized Connection connection() throws SQLException {
@@ -96,7 +100,7 @@ public class Database implements AutoCloseable {
 
         Connection opened = driver.connect(url, properties);
         if (opened == null) {
-            throw new SQLException("驱动无法识别连接地址：" + url);
+            throw new SQLException("驱动无法识别数据库连接地址");
         }
         if (connection != null) {
             closeQuietly(connection);
@@ -117,7 +121,10 @@ public class Database implements AutoCloseable {
         }
     }
 
-    private void createTables() throws SQLException {
+    /** Optional retained legacy schema; v2 deliberately never initializes these inventory tables. */
+    @Deprecated
+    public void initializeLegacyTables() throws SQLException {
+        connection();
         // SQLite 的 TEXT 足够放压缩后的背包数据；MySQL 用 LONGTEXT 防止极端 NBT 撑爆 64KB
         String contentsColumn = settings.mysql() ? "LONGTEXT" : "TEXT";
         String suffix = settings.mysql() ? " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4" : "";
@@ -161,11 +168,34 @@ public class Database implements AutoCloseable {
         try {
             if (!executor.awaitTermination(20, TimeUnit.SECONDS)) {
                 logger.warning("等待数据库写入超时，可能有未落盘的数据");
-                executor.shutdownNow();
+                // Do not close a connection still used by an accepted write.
+                // A finalizer drains the worker and closes it after termination.
+                Thread finalizer = new Thread(this::closeAfterDrain, "BFBackpack-DB-close");
+                finalizer.setDaemon(false);
+                finalizer.start();
+                return;
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            Thread finalizer = new Thread(this::closeAfterDrain, "BFBackpack-DB-close");
+            finalizer.setDaemon(false);
+            finalizer.start();
+            return;
         }
+        closeConnection();
+    }
+
+    private void closeAfterDrain() {
+        boolean interrupted = false;
+        while (!executor.isTerminated()) {
+            try { executor.awaitTermination(1, TimeUnit.SECONDS); }
+            catch (InterruptedException e) { interrupted = true; }
+        }
+        closeConnection();
+        if (interrupted) Thread.currentThread().interrupt();
+    }
+
+    private synchronized void closeConnection() {
         if (connection != null) {
             closeQuietly(connection);
             connection = null;

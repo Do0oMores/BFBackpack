@@ -41,11 +41,14 @@ public final class PluginConfig {
     }
 
     public static PluginConfig load(FileConfiguration config, File dataFolder, Logger logger) {
-        boolean mysql = "mysql".equalsIgnoreCase(config.getString("database.type", "sqlite").trim());
+        String storageType = config.getString("database.type", "sqlite").trim();
+        if (!storageType.equalsIgnoreCase("mysql") && !storageType.equalsIgnoreCase("sqlite"))
+            throw new IllegalArgumentException("database.type 必须为 sqlite 或 mysql");
+        boolean mysql = "mysql".equalsIgnoreCase(storageType);
 
         String prefix = config.getString("database.table-prefix", "bf_");
-        if (prefix == null || !prefix.matches("[A-Za-z0-9_]{0,16}")) {
-            logger.warning("database.table-prefix 只能包含字母/数字/下划线，已回退为 bf_");
+        if (prefix == null || !prefix.matches("(?:[A-Za-z_][A-Za-z0-9_]{0,15})?")) {
+            logger.warning("database.table-prefix 需以字母/下划线开头、最多16位，仅包含字母/数字/下划线，已回退为 bf_");
             prefix = "bf_";
         }
 
@@ -71,10 +74,10 @@ public final class PluginConfig {
             String display = config.getString(base + ".display", type.defaultDisplay());
             String description = config.getString(base + ".description", "");
 
-            Material icon = Material.matchMaterial(config.getString(base + ".icon", type.defaultIcon().name()));
+            Material icon = Material.matchMaterial(config.getString(base + ".icon", type.defaultIcon()));
             if (icon == null) {
                 logger.warning("未知的图标材质: " + config.getString(base + ".icon") + "，已回退为默认图标");
-                icon = type.defaultIcon();
+                icon = Material.valueOf(type.defaultIcon());
             }
 
             int slots = config.getInt(base + ".slots", type.defaultSlots());

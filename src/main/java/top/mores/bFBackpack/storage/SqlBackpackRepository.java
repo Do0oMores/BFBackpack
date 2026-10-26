@@ -9,7 +9,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,9 +24,6 @@ public class SqlBackpackRepository implements BackpackRepository {
     private final String playerTable;
     private final String backpackTable;
     private final String insertIgnore;
-
-    /** key = uuid|type，记录本进程已知的最新版本号，避免自己连续保存两次被误判成冲突。 */
-    private final Map<String, Long> revisionCache = new HashMap<>();
 
     public SqlBackpackRepository(Database database, Logger logger) {
         this.database = database;
@@ -91,7 +87,6 @@ public class SqlBackpackRepository implements BackpackRepository {
                     }
                     long revision = resultSet.getLong("revision");
                     backpacks.put(type.get(), new StoredBackpack(contents, revision));
-                    revisionCache.put(cacheKey(key, type.get()), revision);
                 }
             }
         }
@@ -110,7 +105,8 @@ public class SqlBackpackRepository implements BackpackRepository {
             throw new SQLException("背包内容序列化失败", e);
         }
 
-        long expected = Math.max(expectedRevision, revisionCache.getOrDefault(cacheKey(key, type), 0L));
+        if (expectedRevision < 0 || expectedRevision == Long.MAX_VALUE) throw new RevisionConflictException();
+        long expected = expectedRevision;
         long now = System.currentTimeMillis();
 
         int updated;
@@ -129,6 +125,7 @@ public class SqlBackpackRepository implements BackpackRepository {
         if (updated == 0) {
             Long current = readRevision(connection, key, type);
             if (current == null) {
+                if (expected != 0) throw new RevisionConflictException();
                 // 首次落盘：插入新行
                 try (PreparedStatement statement = connection.prepareStatement(
                         "INSERT INTO " + backpackTable
@@ -143,25 +140,15 @@ public class SqlBackpackRepository implements BackpackRepository {
                     statement.executeUpdate();
                 }
             } else {
-                // 别的实例写过这一行：在线玩家手里的才是最新数据，强制覆盖并留痕
+                // 保留实现也不能强制覆盖其他实例确认的版本。
                 logger.warning("背包写入冲突 (" + key + "/" + type.id() + ")"
-                        + " 库里版本 " + current + "，本地版本 " + expected + "，以在线玩家数据为准");
-                try (PreparedStatement statement = connection.prepareStatement(
-                        "UPDATE " + backpackTable + " SET contents = ?, slots = ?, revision = revision + 1, updated_at = ?"
-                                + " WHERE player_uuid = ? AND backpack_type = ?")) {
-                    statement.setString(1, payload);
-                    statement.setInt(2, slots);
-                    statement.setLong(3, now);
-                    statement.setString(4, key);
-                    statement.setString(5, type.name());
-                    statement.executeUpdate();
-                }
+                        + " 库里版本 " + current + "，本地版本 " + expected + "，已拒绝覆盖");
+                throw new RevisionConflictException();
             }
         }
 
         Long revision = readRevision(connection, key, type);
         long latest = revision == null ? 0L : revision;
-        revisionCache.put(cacheKey(key, type), latest);
         return latest;
     }
 
@@ -197,7 +184,4 @@ public class SqlBackpackRepository implements BackpackRepository {
         return true;
     }
 
-    private static String cacheKey(String uuid, BackpackType type) {
-        return uuid + "|" + type.name();
-    }
 }
