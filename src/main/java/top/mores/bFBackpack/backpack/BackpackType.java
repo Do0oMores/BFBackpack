@@ -1,6 +1,5 @@
 package top.mores.bFBackpack.backpack;
 
-import org.bukkit.Material;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -13,17 +12,17 @@ import java.util.Optional;
  */
 public enum BackpackType {
 
-    ASSAULT("assault", "突击", Material.IRON_SWORD, 27),
-    MEDIC("medic", "医疗", Material.GOLDEN_APPLE, 27),
-    SUPPORT("support", "支援", Material.CHEST, 36),
-    RECON("recon", "侦查", Material.SPYGLASS, 18);
+    ASSAULT("assault", "突击兵", "IRON_SWORD", 27),
+    MEDIC("medic", "医疗兵", "GOLDEN_APPLE", 27),
+    SUPPORT("support", "支援兵", "CHEST", 36),
+    RECON("recon", "侦察兵", "SPYGLASS", 18);
 
     private final String id;
     private final String defaultDisplay;
-    private final Material defaultIcon;
+    private final String defaultIcon;
     private final int defaultSlots;
 
-    BackpackType(String id, String defaultDisplay, Material defaultIcon, int defaultSlots) {
+    BackpackType(String id, String defaultDisplay, String defaultIcon, int defaultSlots) {
         this.id = id;
         this.defaultDisplay = defaultDisplay;
         this.defaultIcon = defaultIcon;
@@ -39,7 +38,7 @@ public enum BackpackType {
         return defaultDisplay;
     }
 
-    public Material defaultIcon() {
+    public String defaultIcon() {
         return defaultIcon;
     }
 

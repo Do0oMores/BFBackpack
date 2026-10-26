@@ -1,0 +1,103 @@
+# ============================================================================
+# BFBackpack 2.0 兵种装备规则
+# ----------------------------------------------------------------------------
+# 每个兵种/槽位单独限制；deny-tags/deny-items 优先于 allow。
+# default 必须存在、启用、默认解锁且对该兵种/槽位合法，且不需要额外权限。
+# 未配置槽位拒绝装备；无有效默认时返回失效原因并阻止部署。
+#
+# GADGET_1 / GADGET_2 按兵种职责区分，第二阶段可继续细分：
+#   ASSAULT  反载具工具 + 爆炸物
+#   MEDIC    医疗包   + 烟雾装备
+#   SUPPORT  弹药补给 + 修理工具
+#   RECON    侦察工具 + 复活信标
+# 这些默认值全部指向 weapons.yml 中 provider: BFEXAMPLE 的占位资源。
+# 第二阶段替换为真实 TaCZ/Forge 装备 ID 后，才可能通过运行时校验。
+# ============================================================================
+classes:
+  ASSAULT:
+    PRIMARY:
+      allow-tags: [battlefield:assault_rifle, battlefield:semi_auto_rifle]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:stg44
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:anti_tank
+    GADGET_2:
+      allow-tags: [battlefield:gadget]
+      default: battlefield:dynamite
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+
+  MEDIC:
+    PRIMARY:
+      allow-tags: [battlefield:smg]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:mp40
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:medical]
+      default: battlefield:medkit
+    GADGET_2:
+      allow-tags: [battlefield:smoke]
+      default: battlefield:smoke_grenade
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+
+  SUPPORT:
+    PRIMARY:
+      allow-tags: [battlefield:lmg]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:mg42
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:supply]
+      default: battlefield:ammo_box
+    GADGET_2:
+      allow-tags: [battlefield:repair]
+      default: battlefield:repair_tool
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife
+
+  RECON:
+    PRIMARY:
+      allow-tags: [battlefield:bolt_action, battlefield:semi_auto_rifle]
+      deny-tags: []
+      deny-items: []
+      default: battlefield:kar98k
+    SECONDARY:
+      allow-tags: [battlefield:pistol]
+      default: battlefield:p38
+    GADGET_1:
+      allow-tags: [battlefield:recon]
+      default: battlefield:spotting_scope
+    GADGET_2:
+      allow-tags: [battlefield:beacon]
+      default: battlefield:respawn_beacon
+    GRENADE:
+      allow-tags: [battlefield:grenade]
+      default: battlefield:frag
+    MELEE:
+      allow-tags: [battlefield:melee]
+      default: battlefield:knife

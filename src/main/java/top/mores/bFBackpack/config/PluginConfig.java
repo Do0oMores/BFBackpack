@@ -4,6 +4,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import top.mores.bFBackpack.backpack.BackpackSettings;
 import top.mores.bFBackpack.backpack.BackpackType;
+import top.mores.bFBackpack.service.ValidationEngine;
 import top.mores.bFBackpack.storage.DbSettings;
 
 import java.io.File;
@@ -27,10 +28,13 @@ public final class PluginConfig {
     private final boolean restrictItems;
     private final boolean ejectIllegalItems;
     private final Map<BackpackType, BackpackSettings> backpacks;
+    private final ValidationEngine.Settings validation;
+    private final long permissionSnapshotMaxAgeMs;
 
     private PluginConfig(DbSettings database, int switchCooldownMs, boolean openOnSwitch, int autoSaveSeconds,
                          boolean restrictItems, boolean ejectIllegalItems,
-                         Map<BackpackType, BackpackSettings> backpacks) {
+                         Map<BackpackType, BackpackSettings> backpacks,
+                         ValidationEngine.Settings validation, long permissionSnapshotMaxAgeMs) {
         this.database = database;
         this.switchCooldownMs = switchCooldownMs;
         this.openOnSwitch = openOnSwitch;
@@ -38,14 +42,19 @@ public final class PluginConfig {
         this.restrictItems = restrictItems;
         this.ejectIllegalItems = ejectIllegalItems;
         this.backpacks = backpacks;
+        this.validation = validation;
+        this.permissionSnapshotMaxAgeMs = permissionSnapshotMaxAgeMs;
     }
 
     public static PluginConfig load(FileConfiguration config, File dataFolder, Logger logger) {
-        boolean mysql = "mysql".equalsIgnoreCase(config.getString("database.type", "sqlite").trim());
+        String storageType = config.getString("database.type", "sqlite").trim();
+        if (!storageType.equalsIgnoreCase("mysql") && !storageType.equalsIgnoreCase("sqlite"))
+            throw new IllegalArgumentException("database.type 必须为 sqlite 或 mysql");
+        boolean mysql = "mysql".equalsIgnoreCase(storageType);
 
         String prefix = config.getString("database.table-prefix", "bf_");
-        if (prefix == null || !prefix.matches("[A-Za-z0-9_]{0,16}")) {
-            logger.warning("database.table-prefix 只能包含字母/数字/下划线，已回退为 bf_");
+        if (prefix == null || !prefix.matches("(?:[A-Za-z_][A-Za-z0-9_]{0,15})?")) {
+            logger.warning("database.table-prefix 需以字母/下划线开头、最多16位，仅包含字母/数字/下划线，已回退为 bf_");
             prefix = "bf_";
         }
 
@@ -71,10 +80,10 @@ public final class PluginConfig {
             String display = config.getString(base + ".display", type.defaultDisplay());
             String description = config.getString(base + ".description", "");
 
-            Material icon = Material.matchMaterial(config.getString(base + ".icon", type.defaultIcon().name()));
+            Material icon = Material.matchMaterial(config.getString(base + ".icon", type.defaultIcon()));
             if (icon == null) {
                 logger.warning("未知的图标材质: " + config.getString(base + ".icon") + "，已回退为默认图标");
-                icon = type.defaultIcon();
+                icon = Material.valueOf(type.defaultIcon());
             }
 
             int slots = config.getInt(base + ".slots", type.defaultSlots());
@@ -103,7 +112,12 @@ public final class PluginConfig {
                 Math.max(0, config.getInt("settings.auto-save-seconds", 300)),
                 config.getBoolean("settings.restrict-items", true),
                 config.getBoolean("settings.eject-illegal-items", true),
-                backpacks);
+                backpacks,
+                new ValidationEngine.Settings(
+                        config.getInt("runtime-validation.timeout-ms", 3000),
+                        config.getInt("runtime-validation.max-concurrent-validations", 8),
+                        config.getInt("runtime-validation.queue-capacity", 32)),
+                Math.max(0, config.getLong("permissions.max-snapshot-age-ms", 5000)));
     }
 
     public DbSettings database() {
@@ -134,11 +148,22 @@ public final class PluginConfig {
         return backpacks.get(type);
     }
 
+    /** Bounded runtime-validation pool settings; see config.yml runtime-validation. */
+    public ValidationEngine.Settings validation() {
+        return validation;
+    }
+
+    /** Maximum age of a permission snapshot before mutations and deployment reject it; 0 disables the check. */
+    public long permissionSnapshotMaxAgeMs() {
+        return permissionSnapshotMaxAgeMs;
+    }
+
     public String describe() {
         return "存储=" + (database.mysql() ? "MySQL" : "SQLite")
                 + "，前缀=" + database.tablePrefix()
                 + "，冷却=" + switchCooldownMs + "ms"
-                + "，自动保存=" + (autoSaveSeconds == 0 ? "关闭" : autoSaveSeconds + "s");
+                + "，自动保存=" + (autoSaveSeconds == 0 ? "关闭" : autoSaveSeconds + "s")
+                + "，校验超时=" + validation.timeoutMs() + "ms";
     }
 
     @Override

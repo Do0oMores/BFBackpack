@@ -1,21 +1,42 @@
 name: BFBackpack
-version: '${version}'
-
+version: '${project.version}'
 main: top.mores.bFBackpack.BFBackpack
 api-version: '1.20'
-description: 战地风格四兵种背包，数据持久化到 SQLite / MySQL
+description: Battlefield 服务器权威配装后端，API v2
 author: Mores
-
 commands:
   bfbackpack:
-    description: 打开或切换战地风格背包
-    usage: /bfbackpack [select|switch|list|reload]
+    description: 军械库、解锁、四兵种配装和附件管理
+    usage: /bfbackpack <catalog|unlock|loadout|weapon|settings>
     aliases: [bp, backpack]
-
 permissions:
-  bfbackpack.use:
-    description: 允许使用背包系统
-    default: true
-  bfbackpack.reload:
-    description: 允许重载配置
+  bfbackpack.admin:
+    description: 所有后端调试命令
     default: op
+    children:
+      bfbackpack.admin.catalog: true
+      bfbackpack.admin.unlock: true
+      bfbackpack.admin.loadout: true
+      bfbackpack.admin.weapon: true
+      bfbackpack.admin.settings: true
+  bfbackpack.admin.catalog:
+    description: 查询和重载目录
+    default: op
+  bfbackpack.admin.unlock:
+    description: 管理永久解锁
+    default: op
+  bfbackpack.admin.loadout:
+    description: 检查和修改兵种配装
+    default: op
+  bfbackpack.admin.weapon:
+    description: 检查和修改附件
+    default: op
+  bfbackpack.admin.settings:
+    description: 玩家默认兵种设置
+    default: op
+  bfbackpack.weapon.gewehr43:
+    description: 临时授权 Gewehr 43（仍受兵种规则限制）
+    default: false
+  bfbackpack.attachment.scope_advanced:
+    description: 临时授权高级瞄准镜
+    default: false
