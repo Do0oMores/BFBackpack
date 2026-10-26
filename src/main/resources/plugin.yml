@@ -1,0 +1,5 @@
+name: BFBackpack
+version: '${version}'
+
+main: top.mores.bFBackpack.BFBackpack
+api-version: '1.20'
